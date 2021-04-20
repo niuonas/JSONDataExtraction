@@ -10,9 +10,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 import collections
+import smtplib
+from datetime import date
+from pathlib import Path
+
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+from email.mime.base import MIMEBase
+from email import encoders
+
 
 def loop_through_file(directory):
-    #Get the full path for rach file in the directory and pass the path to unzip_file function
+    #Get the full path for each file in the directory and pass the path to unzip_file function
     for subdir, dirs, files in os.walk(directory):
         count = 0
         for filename in files:
@@ -69,6 +80,7 @@ if __name__ == "__main__":
     timeZones = []
     productionYearSerialNumberDict = {}
     listOfOddSerialNumbers = []
+    folder_to_save_plots = r'C:\Users\niuonas\Documents\PythonCode\ReadJSONFiles\Plots'
 
     SerialNumberYear = {
         "A" : "2001", 
@@ -148,26 +160,32 @@ if __name__ == "__main__":
     version_occurance_rate_complete = collections.OrderedDict(sorted_list)
 
     #Print the dict to have as reference
-    pp.pprint(productionYearSerialNumberDict)
-    pp.pprint(listOfOddSerialNumbers)
+    #pp.pprint(productionYearSerialNumberDict)
+    #pp.pprint(listOfOddSerialNumbers)
 
     #Bar chart that showcase total number of versions
     plt.bar(version_occurance_rate_complete.keys(), version_occurance_rate_complete.values(), width = 0.8, color = "b", align = 'center')
     plt.xticks(rotation=90)
     plt.locator_params(axis="y", nbins=20)
-    plt.show()
+    plt.tight_layout()
+    plt.savefig(folder_to_save_plots + r'\\barChartVersions.jpg', dpi = 200)
+    plt.close()
 
     #Bar chart that showcase total number of time zones
     plt.bar(timeZones_dict.keys(), timeZones_dict.values(), width = 0.8, color = "b", align = 'center')
     plt.xticks(rotation=90)
     plt.locator_params(axis="y", nbins=20)
-    plt.show()
+    plt.tight_layout()
+    plt.savefig(folder_to_save_plots + r'\\barChartTimezones.jpg', dpi = 200)
+    plt.close()
 
     #Bar chart showing the amount of unset serial numbers per version
     plt.bar(version_occurance_rate.keys(), version_occurance_rate.values(), width = 0.8, color = "r", align = 'center')
     plt.xticks(rotation=90)
     plt.locator_params(axis="y", nbins=20)
-    plt.show()
+    plt.tight_layout()
+    plt.savefig(folder_to_save_plots + r'\\barChartUnsetSerial.jpg', dpi = 200)
+    plt.close()
 
     #Pie chart that showcase bad version vs correct versions
     labels = f'Unset Serial Numbers ({entriesWithBadVersion})', f'Set Serial Numbers ({totalEntries - entriesWithBadVersion})'
@@ -178,5 +196,28 @@ if __name__ == "__main__":
     fig1, ax1 = plt.subplots()
     ax1.pie(sizes, explode = explode, labels = labels, autopct='%1.1f%%', shadow=True, startangle=90, colors = colors)
     ax1.axis('equal')
+    plt.tight_layout()
+    plt.savefig(folder_to_save_plots + r'\pieChartVersions.jpg', dpi = 200)
+    plt.close()
 
-    plt.show()
+    #Sending email with data
+    send_from = 'python_bot@gmail.com'
+    send_to = ['niuonas@steelcase.com','rbaba2@steelcase.com','galter@steelcase.com']
+    
+    msg = MIMEMultipart()
+    msg['Subject'] = 'Json Data Content for ' + str(date.today())
+    msg['From'] = send_from
+    msg['To'] = ','.join(send_to)
+
+    body = 'The plots for today! This is an automated message, dont reply!'
+    
+    for filename in os.listdir(folder_to_save_plots):
+        with open(folder_to_save_plots + r'\\' + filename, 'rb') as file:
+            img = MIMEImage(file.read())
+        msg.attach(img)
+
+    msg.attach(MIMEText(body))
+
+    s = smtplib.SMTP('gg.steelcase.com')
+    s.sendmail(send_from,send_to, msg.as_string())
+    s.quit()
